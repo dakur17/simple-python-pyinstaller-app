@@ -1,0 +1,10 @@
+version: 0.0
+os: linux
+files:
+  - source: /sources/add2vals.py
+    destination: /pyinstaller
+hooks:
+  BeforeInstall:
+    - location: scripts/install_dependencies
+      timeout: 300
+      runas: root
