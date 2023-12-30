@@ -13,6 +13,20 @@ node {
         junit 'test-reports/results.xml'
     }
 
+    stage('Manual Approval'){
+        def userInput = input(
+            message: 'Lanjutkan ke tahap Deploy?',
+            parameters: [
+                choice(name: 'ACTION', choices: ['Proceed', 'Abort'])
+            ]
+        )
+        
+        if (userInput == 'Abort') {
+            currentBuild.result = 'ABORTED'
+            error('Eksekusi pipeline dihentikan')
+        }
+    }
+
     stage('Deploy'){
         dir(env.BUILD_ID){
             unstash name: 'compiled-results'
