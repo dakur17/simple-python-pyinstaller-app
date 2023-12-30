@@ -14,17 +14,13 @@ node {
     }
 
     stage('Deploy'){
-        def VOLUME = "${pwd()}/sources:/src"
+        dir(env.BUILD_ID){
+            unstash name: 'compiled-results'
+            sh "docker run --rm -v ${pwd()}/sources:/src cdrx/pyinstaller-linux:python2 'pyinstaller -F add2vals.py'"
+        }
 
-        docker.image('cdrx/pyinstaller-linux:python2').inside("-v ${VOLUME}") {
-            dir(env.BUILD_ID) {
-                unstash 'compiled-results'
-                sh "pyinstaller -F add2vals.py"
-            }
-        }
         sleep time: 1, unit: "MINUTES"
-        docker.image('cdrx/pyinstaller-linux:python2').inside("-v ${VOLUME}") {
-            sh "rm -rf build dist"
-        }
+
+        sh "docker run --rm -v ${pwd()}/sources:/src cdrx/pyinstaller-linux:python2 'rm -rf build dist'"
     }
 }
