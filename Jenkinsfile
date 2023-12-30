@@ -14,17 +14,7 @@ node {
     }
 
     stage('Manual Approval'){
-        def userInput = input(
-            message: 'Lanjutkan ke tahap Deploy?',
-            parameters: [
-                choice(name: 'ACTION', choices: ['Proceed', 'Abort'])
-            ]
-        )
-        
-        if (userInput == 'Abort') {
-            currentBuild.result = 'ABORTED'
-            error('Eksekusi pipeline dihentikan')
-        }
+        input(message: "Lanjutkan ke tahap Deploy?")
     }
 
     stage('Deploy'){
