@@ -1,41 +1,39 @@
 node {
-    def VOLUME = "${pwd()}/sources:/src"
-    def IMAGE = 'cdrx/pyinstaller-linux:python2'
-    def BUILD_ID = env.BUILD_ID
-
     stage('Build') {
-        node {
-            docker.image('python:3.12.1-alpine3.19').inside {
-                sh 'python -m py_compile sources/add2vals.py sources/calc.py'
-                stash name: 'compiled-results', includes: 'sources/*.py*'
-            }
+        def pythonImage = 'python:3.12.1-alpine3.19'
+        checkout scm
+
+        docker.image(pythonImage).inside {
+            sh 'python -m py_compile sources/add2vals.py sources/calc.py'
+            stash name: 'compiled-results', includes: 'sources/*.py*'
         }
     }
 
     stage('Test') {
-        node {
-            docker.image('qnib/pytest').inside {
-                sh 'py.test --junit-xml test-reports/results.xml sources/test_calc.py'
-            }
-            post {
-                always {
-                    junit 'test-reports/results.xml'
-                }
-            }
+        def pytestImage = 'qnib/pytest'
+
+        docker.image(pytestImage).inside {
+            sh 'py.test --junit-xml test-reports/results.xml sources/test_calc.py'
         }
+
+        junit 'test-reports/results.xml'
     }
 
-    stage('Deliver') {
-        node {
-            dir(BUILD_ID) {
+    stage('Deploy') {
+        def volume = "${pwd()}/sources:/src"
+        def pyinstallerImage = 'cdrx/pyinstaller-linux:python2'
+
+        docker.image(pyinstallerImage).inside("-v ${volume}") {
+            dir(env.BUILD_ID) {
                 unstash 'compiled-results'
-                sh "docker run --rm -v ${VOLUME} ${IMAGE} pyinstaller -F add2vals.py"
+                sh "pyinstaller -F add2vals.py"
             }
-            try {
-                archiveArtifacts "${BUILD_ID}/sources/dist/add2vals"
-            } finally {
-                sh "docker run --rm -v ${VOLUME} ${IMAGE} rm -rf build dist"
-            }
+        }
+
+        archiveArtifacts artifacts: "${env.BUILD_ID}/sources/dist/add2vals", allowEmptyArchive: true
+
+        docker.image(pyinstallerImage).inside("-v ${volume}") {
+            sh "rm -rf build dist"
         }
     }
 }
