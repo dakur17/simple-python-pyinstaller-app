@@ -19,7 +19,7 @@ node {
         
         dir("${env.BUILD_ID}") {
             unstash 'compiled-results'
-            sh "docker run --rm -v ${VOLUME} ${IMAGE} pyinstaller -F add2vals.py"
+            sh "docker run --rm -v -t ${VOLUME} ${IMAGE} pyinstaller -F add2vals.py"
         }
         sleep time: 1, unit: "MINUTES"
         
