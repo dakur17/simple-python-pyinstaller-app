@@ -23,11 +23,7 @@ node {
         }
         sleep time: 1, unit: "MINUTES"
         
-        post {
-            success {
-                archiveArtifacts artifacts: "${env.BUILD_ID}/sources/dist/add2vals", allowEmptyArchive: true
-                sh "docker run --rm -v ${VOLUME} ${IMAGE} rm -rf build dist"
-            }
-        }
+        archiveArtifacts artifacts: "${env.BUILD_ID}/sources/dist/add2vals", allowEmptyArchive: true
+        sh "docker run --rm -v ${VOLUME} ${IMAGE} rm -rf build dist"
     }
 }
