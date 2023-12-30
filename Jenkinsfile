@@ -16,4 +16,18 @@ node {
         //     }
         // }
     }
+
+    stage('Deploy') {
+        def BUILD_ID = env.BUILD_ID
+        dir(BUILD_ID) {
+            unstash 'compiled-results'
+            sh "docker run --rm -v ${VOLUME} ${IMAGE} pyinstaller -F add2vals.py"
+        }
+
+        try {
+            archiveArtifacts "${BUILD_ID}/sources/dist/add2vals"
+        } finally {
+            sh "docker run --rm -v ${VOLUME} ${IMAGE} rm -rf build dist"
+        }
+    }
 }
