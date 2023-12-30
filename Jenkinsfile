@@ -23,10 +23,7 @@ node {
         }
         sleep time: 1, unit: "MINUTES"
         
-        try {
-            archiveArtifacts "${env.BUILD_ID}/sources/dist/add2vals"
-        } finally {
-            sh "docker run --rm -v ${VOLUME} ${IMAGE} 'rm -rf build dist'"
-        }
+        archiveArtifacts "${env.BUILD_ID}/sources/dist/add2vals"
+        sh "docker run --rm -v ${VOLUME} ${IMAGE} 'rm -rf build dist'"
     }
 }
