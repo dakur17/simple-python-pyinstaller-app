@@ -1,39 +1,56 @@
-node {
-    stage('Build') {
-        def pythonImage = 'python:3.12.1-alpine3.19'
-        checkout scm
-
-        docker.image(pythonImage).inside {
-            sh 'python -m py_compile sources/add2vals.py sources/calc.py'
-            stash name: 'compiled-results', includes: 'sources/*.py*'
-        }
+pipeline {
+    agent none
+    options {
+        skipStagesAfterUnstable()
     }
-
-    stage('Test') {
-        def pytestImage = 'qnib/pytest'
-
-        docker.image(pytestImage).inside {
-            sh 'py.test --junit-xml test-reports/results.xml sources/test_calc.py'
-        }
-
-        junit 'test-reports/results.xml'
-    }
-
-    stage('Deploy') {
-        def volume = "${pwd()}/sources:/src"
-        def pyinstallerImage = 'cdrx/pyinstaller-linux:python2'
-
-        docker.image(pyinstallerImage).inside("-v ${volume}") {
-            dir(env.BUILD_ID) {
-                unstash 'compiled-results'
-                sh "pyinstaller -F add2vals.py"
+    stages {
+        stage('Build') {
+            agent {
+                docker {
+                    image 'python:3.12.1-alpine3.19'
+                }
+            }
+            steps {
+                sh 'python -m py_compile sources/add2vals.py sources/calc.py'
+                stash(name: 'compiled-results', includes: 'sources/*.py*')
             }
         }
-
-        archiveArtifacts artifacts: "${env.BUILD_ID}/sources/dist/add2vals", allowEmptyArchive: true
-
-        docker.image(pyinstallerImage).inside("-v ${volume}") {
-            sh "rm -rf build dist"
+        stage('Test') {
+            agent {
+                docker {
+                    image 'qnib/pytest'
+                }
+            }
+            steps {
+                sh 'py.test --junit-xml test-reports/results.xml sources/test_calc.py'
+            }
+            post {
+                always {
+                    junit 'test-reports/results.xml'
+                }
+            }
+        }
+        stage('Deploy') { 
+            agent any
+            environment { 
+                VOLUME = '$(pwd)/sources:/src'
+                IMAGE = 'cdrx/pyinstaller-linux:python2'
+            }
+            steps {
+                dir(path: env.BUILD_ID) { 
+                    unstash(name: 'compiled-results') 
+                    sh "docker run --rm -v ${VOLUME} ${IMAGE} 'pyinstaller -F add2vals.py'" 
+                }
+                script{
+                    sh 'sleep 60'
+                }
+            }
+            post {
+                success {
+                    archiveArtifacts "${env.BUILD_ID}/sources/dist/add2vals" 
+                    sh "docker run --rm -v ${VOLUME} ${IMAGE} 'rm -rf build dist'"
+                }
+            }
         }
     }
 }
